@@ -1,0 +1,7 @@
+.obsidian/
+*.apk
+*.anki
+.ankiaddon
+__pycache__/
+.DS_Store
+materials/raw/
