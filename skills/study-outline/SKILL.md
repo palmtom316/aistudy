@@ -7,6 +7,8 @@ argument-hint: "[科目名]"
 
 # study-outline
 
+# implements SPEC §3.1, §3.2, §3.3, §6.1, §6.2
+
 把资料梳理成 `notes/` 下的原子笔记，每个知识点一篇，严格按 `templates/note.md` 的 schema。
 
 ## 强制约束（不可绕过）
@@ -17,7 +19,7 @@ argument-hint: "[科目名]"
 4. **必填状态字段**：`core / difficulty / mastery=0 / exam_freq / related / source`。缺一不可。
 5. **回链**：`source` 必须写明来自哪份材料（文件名 + 页码/章节）。
 6. **不幻觉**：资料里没有的公式/数值，要么标 `<!-- 存疑 -->`，要么不写。
-7. **taxonomy 锁死**：`tags` 只允许 `subject/`、`chapter/`、`type/` 三类前缀。不许随手发明 tag。
+7. **taxonomy 锁死**：`tags` 只允许 `domain/`、`subject/`、`system/`（医学）、`course/`（医学）四类前缀（SPEC §6.2）。不许随手发明 tag，词典外 tag 一律拒收。
 
 ## 输入
 
@@ -25,7 +27,7 @@ argument-hint: "[科目名]"
 
 ## 输出
 
-对每个 core 知识点，写一个文件到 `notes/<topic>.md`，文件名用知识点全称（无空格、无特殊符号，必要时下划线）。
+对每个 core 知识点，写一个文件到 `notes/<domain>/<class>/<中文知识点名>.md`（D-6.1：文件名用中文，等于 `topic` 值；`slug` 字段填 ASCII 供脚本引用）。
 
 frontmatter 模板见 `templates/note.md`，必须填满。
 

@@ -1,44 +1,9 @@
 # 学习仪表盘
 
 > 在 Obsidian 中打开本文件，Dataview 插件会渲染以下查询。
-> CLI 下看就是一堆代码块，正常。
+> CLI 下看就是一堆代码块，正常。结构见 SPEC §9。
 
-## 🔴 核心点却没掌握（最高优先级）
-
-```dataview
-TABLE difficulty, exam_freq, last_reviewed
-FROM "notes"
-WHERE core = true AND mastery <= 1
-SORT exam_freq DESC, difficulty DESC
-```
-
-## 🟠 高频考点却没掌握（真题命中率）
-
-```dataview
-TABLE topic, exam_freq, last_reviewed
-FROM "notes"
-WHERE exam_freq >= 2 AND mastery <= 1
-SORT exam_freq DESC
-```
-
-## 🟡 孤立知识点（图谱断点）
-
-```dataview
-TABLE topic, related
-FROM "notes"
-WHERE length(related) = 0
-```
-
-## 🟢 该复盘了（间隔 > 7 天）
-
-```dataview
-TABLE topic, last_reviewed
-FROM "notes"
-WHERE last_reviewed != null AND date(today) - date(last_reviewed) > dur(7 days)
-SORT last_reviewed ASC
-```
-
-## 📊 全局掌握度
+## §A 总览
 
 ```dataview
 TABLE length(rows) AS 数量
@@ -46,9 +11,124 @@ FROM "notes"
 GROUP BY mastery
 ```
 
-## ✅ 待重做的错题
+```dataview
+TABLE length(rows) AS 未掌握数
+FROM "notes"
+WHERE mastery <= 1
+GROUP BY domain
+```
 
-```datawiew
+```dataview
+TABLE length(rows) AS superseded 数
+FROM "notes"
+WHERE superseded_by != null
+GROUP BY domain
+```
+
+```dataview
+TABLE length(rows) AS drift 数
+FROM "notes"
+WHERE contains(file.content, "<!-- drift -->")
+GROUP BY domain
+```
+
+## §B CPA
+
+```dataview
+TABLE topic, difficulty, exam_freq, last_reviewed
+FROM #domain/CPA
+WHERE core = true AND mastery <= 1
+SORT exam_freq DESC, difficulty DESC
+```
+
+```dataview
+TABLE topic, exam_freq, last_reviewed
+FROM #domain/CPA
+WHERE exam_freq >= 2 AND mastery <= 1
+SORT exam_freq DESC
+```
+
+```dataview
+TABLE topic, related
+FROM #domain/CPA
+WHERE length(related) = 0
+```
+
+## §C 建造师
+
+```dataview
+TABLE topic, difficulty, exam_freq, last_reviewed
+FROM #domain/建造师
+WHERE core = true AND mastery <= 1
+SORT exam_freq DESC, difficulty DESC
+```
+
+```dataview
+TABLE topic, last_reviewed
+FROM #domain/建造师
+WHERE last_reviewed != null AND date(today) - date(last_reviewed) > dur(7 days)
+SORT last_reviewed ASC
+```
+
+## §D 医学
+
+```dataview
+TABLE topic, difficulty, exam_freq, last_reviewed
+FROM #domain/医学
+WHERE core = true AND mastery <= 1
+SORT exam_freq DESC, difficulty DESC
+```
+
+```dataview
+TABLE topic, last_reviewed
+FROM #domain/医学
+WHERE last_reviewed != null AND date(today) - date(last_reviewed) > dur(7 days)
+SORT last_reviewed ASC
+```
+
+## §E 生物
+
+```dataview
+TABLE topic, difficulty, exam_freq, last_reviewed
+FROM #domain/生物
+WHERE core = true AND mastery <= 1
+SORT exam_freq DESC, difficulty DESC
+```
+
+```dataview
+TABLE topic, last_reviewed
+FROM #domain/生物
+WHERE last_reviewed != null AND date(today) - date(last_reviewed) > dur(7 days)
+SORT last_reviewed ASC
+```
+
+## §F 法规时效预警
+
+```dataview
+TABLE topic, effective_date, superseded_by
+FROM "notes"
+WHERE effective_date != null AND superseded_by = null
+AND date(today) - date(effective_date) > dur(365 days)
+SORT effective_date ASC
+```
+
+## §G Anki drift
+
+```dataview
+TABLE topic, anki_id
+FROM "notes"
+WHERE anki_id = null AND has_image = false
+```
+
+```dataview
+TABLE topic, anki_id
+FROM "notes"
+WHERE contains(file.content, "<!-- drift -->")
+```
+
+## §H 待重做错题
+
+```dataview
 TABLE topic, last_attempted
 FROM "quiz"
 WHERE correct = false

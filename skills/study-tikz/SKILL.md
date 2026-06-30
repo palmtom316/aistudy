@@ -7,6 +7,8 @@ argument-hint: "[电路/图描述]"
 
 # study-tikz
 
+# implements SPEC: none（领域无关，无 SPEC 约束）
+
 输出可直接粘进 Obsidian（TikZJax 插件）的 circuitikz / tikz 代码块。
 
 ## 强制约束
