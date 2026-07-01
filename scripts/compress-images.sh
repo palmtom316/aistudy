@@ -1,30 +1,82 @@
 #!/usr/bin/env bash
 # compress-images.sh —— attachments/ 图片压缩到 1600px/300KB
 # implements SPEC §8
-# 依赖: imagemagick (convert/identify/mogrify)。缺失则提示并退出。
+# 依赖: imagemagick (convert/identify)。缺失则提示并退出。
+#
+# 规则：
+#   1. 长边缩到 1600px（短边按比例）
+#   2. JPEG/WEBP 质量 80 起步，仍 >300KB 逐级降到 60
+#   3. PNG：strip + 8-bit；仍 >300KB 转 jpg 兜底（保留透明失败则警告）
+#   4. 原图备份到 attachments/.original/（gitignore）；压缩版原地写回
+#   5. 跳过 <300KB 且 ≤1600px 的图（无需处理）
 set -euo pipefail
 
-command -v convert >/dev/null 2>&1 || { echo "❌ 缺 imagemagick（convert）。装: sudo apt install imagemagick" >&2; exit 1; }
+# 选 magick（v7）或 convert（v6）
+if command -v magick >/dev/null 2>&1; then
+    IM=(magick)
+elif command -v convert >/dev/null 2>&1; then
+    IM=(convert)
+else
+    echo "❌ 缺 imagemagick。macOS: brew install imagemagick；Linux: apt install imagemagick" >&2; exit 1
+fi
 command -v identify >/dev/null 2>&1 || { echo "❌ 缺 imagemagick（identify）" >&2; exit 1; }
 
-MAX_W=1600
-MAX_KB=300
-count=0
-skip=0
+MAX_DIM=1600
+MAX_BYTES=$((300*1024))
+
+# 跨平台文件大小（字节）：macOS 用 stat -f%z，Linux 用 stat -c%s
+file_bytes() {
+    stat -f%z "$1" 2>/dev/null || stat -c%s "$1" 2>/dev/null || echo 0
+}
+
+mkdir -p attachments/.original
 
 shopt -s nullglob globstar
+count=0; skip=0
 for f in attachments/**/*.{jpg,jpeg,png,gif,webp,bmp}; do
   [ -f "$f" ] || continue
-  w=$(identify -format "%w" "$f" 2>/dev/null || echo 0)
-  kb=$(( $(stat -c%s "$f") / 1024 ))
-  if [ "$w" -le "$MAX_W" ] && [ "$kb" -le "$MAX_KB" ]; then
+  # 长边像素
+  dim=$("${IM[@]}" identify -format '%w %h' "$f" 2>/dev/null | awk '{print ($1>$2?$1:$2)}')
+  dim=${dim:-0}
+  bytes=$(file_bytes "$f")
+  if [ "$dim" -le "$MAX_DIM" ] && [ "$bytes" -le "$MAX_BYTES" ]; then
     skip=$((skip+1)); continue
   fi
-  # 原地覆盖：resize 到最大宽 1600，再压质量
-  tmp="${f}.compressed"
-  convert "$f" -resize "${MAX_W}x${MAX_W}\>" -quality 85 "$tmp"
-  mv "$tmp" "$f"
-  echo "✓ $f  (${w}px/${kb}KB → 压缩)"
+  # 原图备份（同名放到 .original/）
+  bak="attachments/.original/$(basename "$f")"
+  cp "$f" "$bak"
+  ext=$(echo "${f##*.}" | tr 'A-Z' 'a-z')
+  tmp="${f}.tmp"
+  case "$ext" in
+    jpg|jpeg|webp)
+      q=80
+      while [ "$q" -ge 60 ]; do
+        "${IM[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -quality "$q" "$tmp"
+        s=$(file_bytes "$tmp")
+        if [ "$s" -le "$MAX_BYTES" ]; then break; fi
+        q=$((q-10))
+      done
+      mv "$tmp" "$f"
+      ;;
+    png)
+      "${IM[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -strip -depth 8 "$tmp"
+      s=$(file_bytes "$tmp")
+      if [ "$s" -gt "$MAX_BYTES" ]; then
+        echo "  ⚠ PNG >300KB，转 jpg 兜底: $f" >&2
+        "${IM[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -quality 75 "${f%.*}.jpg"
+        rm -f "$tmp" "$f"
+      else
+        mv "$tmp" "$f"
+      fi
+      ;;
+    gif|bmp)
+      # 透明/动画保不住，只 resize
+      "${IM[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" "$tmp"
+      mv "$tmp" "$f"
+      ;;
+  esac
+  nb=$(file_bytes "$f")
+  echo "✓ $f  (${dim}px/$((bytes/1024))KB → ${MAX_DIM}pxmax/$((nb/1024))KB，原图 .original/)"
   count=$((count+1))
 done
 

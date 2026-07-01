@@ -1,4 +1,5 @@
 .venv/
+attachments/.original/
 *.apkg
 __pycache__/
 *.pyc
