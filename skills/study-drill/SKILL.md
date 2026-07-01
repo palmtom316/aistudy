@@ -13,7 +13,7 @@ user-invocable: true
 ## 数据来源（必读）
 
 1. `read dashboard.md` 拿到 Dataview 查询意图（CLI 下查询不渲染，但查询条件可读）。
-2. `rg -l "core: true" notes/ | xargs rg -L "mastery: [23]"` → core 未掌握清单。
+2. `rg -l "core: true" notes/ -g '!README.md' | xargs rg --files-without-match "mastery: [23]"` → core 未掌握清单（注意：ripgrep 的 `-L` 是 `--follow` 不是 files-without-match，必须用 `--files-without-match`）。
 3. `rg -l "exam_freq: ([2-9]|[1-9][0-9]+)" notes/` → 高频考点清单（正则修 bug，匹配 12/22）。
 4. `rg -l "correct: false" quiz/` → 待重做错题清单。
 5. `rg -c "exam_freq: ([1-9]|[1-9][0-9]+)" notes/` 与总 note 数比 → 全局 exam_freq>0 占比。

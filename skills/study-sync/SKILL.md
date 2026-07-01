@@ -13,7 +13,7 @@ user-invocable: true
 ## 数据来源（必读，全部来自 rg，不靠模型记忆）
 
 1. **drift 项**：`rg -l "<!-- drift -->" notes/` → 连续 2 次 ease<1.5 被 anki-sync.sh 标记的 note。
-2. **未导出项**：`rg -L "anki_id: [0-9]" notes/` → frontmatter 无 anki_id 的 note（还没跑过 anki-export）。
+2. **未导出项**：`rg --files-without-match "anki_id: [0-9]" notes/ -g '!README.md'` → frontmatter 无 anki_id 的 note（还没跑过 anki-export）。
 3. **anki_id 缺失分布**：按 subject 汇总数量。
 
 ## 输出（直接打印，不写文件）
