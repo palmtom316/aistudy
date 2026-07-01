@@ -7,13 +7,15 @@
 ```
 vault (仓库根 = Obsidian vault)
 ├── materials/   原始资料（OCR 后的 md）
-├── notes/       知识点原子笔记（一个知识点一文件）
-├── quiz/        题目原子（回链知识点）
-├── prompts/     prompt 库
+├── notes/       知识点原子笔记（一个知识点一文件，含 ## Descriptors → Anki 卡源）
+├── quiz/        单点题（descriptor 级）
+├── cases/       综合题/案例
+├── journal/     复习日志（skill append）
 ├── dashboard.md Dataview 诊断仪表盘
-├── templates/   笔记 / quiz / dashboard 模板
-├── skills/      LLM 侧行为 SOP（outline / quiz / tikz / drill）
-└── scripts/     确定性运维脚本（OCR / 导出 / 调度）
+├── templates/   note / quiz / case / journal / descriptors / structural
+├── skills/      LLM 侧行为 SOP（outline / quiz / case / drill / sync / review）
+├── scripts/     确定性运维脚本（OCR / Anki 导出&同步 / 校验 / 压缩）
+└── .trellis/    SPEC.md（法律）+ PLAN.md（施工图）
 ```
 
 判据：**确定性操作走脚本，判断与表达走 skill，阅读与答题坐 Obsidian。**
@@ -21,13 +23,18 @@ vault (仓库根 = Obsidian vault)
 ## 快速开始
 
 ```bash
-make prep FILE=课件.pdf        # OCR + 归档到 materials/
-make outline SUBJECT=数字集成电路设计   # 跑 study-outline skill
-make quiz TOPIC="VTC曲线与五个偏置区域"
-make tikz "CMOS反相器"
+make prep FILE=课件.pdf        # OCR + 归档到 materials/建造师/机电实务/<year>/
+make outline SUBJECT=建造师.机电实务   # 跑 study-outline skill → notes/
+make quiz TOPIC="电缆敷设"       # 单点题
+make case SUBJECT=建造师.机电实务  # 综合题/案例
 make drill                    # 读 dashboard 清单 → 今日复习计划
-make anki                     # 导出 quiz/ 到 Anki 包
+make anki                     # 导出 Descriptors + quiz → Anki 包
+make taxonomy                 # 校验 notes tags 受控词汇
+make sync                     # 提示对账 Anki drift（study-sync）
+make review                   # 周/月复盘
 ```
+
+MVP 单域：一级建造师·机电实务。法律见 `.trellis/SPEC.md`，施工图见 `.trellis/PLAN.md`。
 
 学习时打开 Obsidian 指向本仓库根目录，dashboard.md 是入口。
 
