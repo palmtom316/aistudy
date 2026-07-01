@@ -1,7 +1,8 @@
 # aistudy SPEC
 
-> 本文件是系统的最高约束。任何 skill / script / 模板的实现必须与本文件一致；
-> 不一致时要么改实现，要么改本文件。README 是导览，SPEC 是法律。
+> 本文件是系统的最高约束，亦是唯一规格文档。任何 skill / script / 模板的实现必须与本文件一致；
+> 不一致时要么改实现，要么改本文件。README 是导览，SPEC 是法律，PLAN 是施工图。
+> 2026-07-01 合并：原 `.trellis/spec/SPEC.md` + audit 报告 + T-001 计划 + journal 决策 + 三处补充（case schema / anki_id 策略 / CSV 来源）。
 
 ---
 
@@ -27,7 +28,7 @@ CLI + scripts (确定性运维)  +  skills (LLM 侧行为)
 
 ## 3. 数据模型
 
-### 3.1 通用 frontmatter（所有 note 必填，字段冻结）
+### 3.1 通用 note frontmatter（所有 note 必填，字段冻结）
 
 ```yaml
 ---
@@ -44,7 +45,7 @@ exam_freq:           # int，默认 0；无数据时 drill 忽略（见 §3.4）
 last_reviewed:       # YYYY-MM-DD | null
 effective_date:      # 法规/指南生效日；非法规类留 null
 superseded_by:       # [[slug]] 或 null；过期时指向新版本 note
-anki_id:             # int | null；Anki 卡 ID，sync 用来对账
+anki_id:             # int | null；Anki note id，sync 用来对账（见 §5.1）
 has_image:           # true | false
 related: []          # wikilink 数组，例 ["[[slug-a]]", "[[slug-b|显示名]]"]
 source: []           # 回链数组，每项 "materials/<domain>/<subject>/<year>/file.md:p123"
@@ -55,7 +56,7 @@ tags: []             # 受控词汇表，见 §6.2
 
 **字段计 18 个**：domain / subject / chapter / topic / slug / type / core / difficulty / mastery / exam_freq / last_reviewed / effective_date / superseded_by / anki_id / has_image / related / source / tags。
 
-**与 `slug` 字段的关系**（2026-06-30 D-6.1 决策后）：文件名用中文（`topic` 值），`slug` 字段保留 ASCII 供脚本引用。两者并存：文件名 = 中文知识点名，slug = `[a-z0-9-]` ASCII 标识。
+**与 `slug` 字段的关系**（D-6.1 决策后）：文件名用中文（`topic` 值），`slug` 字段保留 ASCII 供脚本引用。两者并存：文件名 = 中文知识点名，slug = `[a-z0-9-]` ASCII 标识。
 
 ### 3.2 Concept-Descriptor 区块（RemNote 借鉴）
 
@@ -89,6 +90,47 @@ descriptor 装不下的结构走专门模板（在 `templates/structural/`）：
 - `study-drill` 检测到全局 `exam_freq>0` 的 note < 20% 时，**忽略 exam_freq 排序**，只用 `core + mastery + last_reviewed`。
 - 避免无数据时优先级空转。
 
+### 3.5 case frontmatter schema（综合题/案例/病历）—— 2026-07-01 补
+
+`study-case` 写入 `cases/<exam>-<YYYYMMDD>.md`，必须按 `templates/case.md` schema：
+
+```yaml
+---
+exam:               # 一建 | 二建 | CPA综合 | 执业医师 | ...（出题来源/级别）
+date:               # YYYYMMDD 做题日
+subject:            # 建造师.机电实务 | ...
+links: []           # [notes/中文文件名.md] 回链知识点，必填（D-6.1 中文文件名）
+difficulty: 1       # 1-5
+last_attempted:     # YYYY-MM-DD | null
+correct:            # true | false | null
+score:              # "得/总"，如 "8/20"；未评留空
+source: []          # 回链数组，必填（§5.2）。缺 source 则 study-case abort
+tags: []            # 受控词汇表（§6.2）
+---
+```
+
+正文区块固定为：`## 题目` / `## 我的答案` / `## 标准答案 / 评分 rubric` / `## 错因 / 复习触发`。
+rubric 必须可量化（步骤分、关键点扣分），且必含 source 回链（§5.2 信任链）。
+与 `quiz/` 的区别：quiz 是单点题（descriptor 级、一调一题）；case 是综合题（多步、多知识点、可拆分步给分）。
+
+### 3.6 journal 与 review 文档 schema —— 2026-07-01 补
+
+**journal 行格式**（§5.3 已定，重申）：
+```
+- HH:MM | <slug> | <correct/null> | <drift?>
+```
+`journal/<YYYY-MM-DD>.md` 首行 `# <YYYY-MM-DD> 复习日志`，其后为上述 bullet 行。skill append 时只 append bullet，不动首行。
+
+**review 文档** `journal/<YYYY-MM-DD>-review.md`：
+```
+# <YYYY-MM-DD> 周/月复盘
+## 进度概览
+## 薄弱点（按 mastery 分布 + journal correct=false 频次）
+## 下周期建议
+## 本轮出题清单（调用 study-quiz/case 产生的题 slug 列表）
+```
+study-review 生成，护栏见 §5.4（只读结构化字段，不读 note 正文）。
+
 ## 4. 目录结构
 
 ```
@@ -103,8 +145,10 @@ aistudy/
 ├── skills/                                      # LLM 侧行为
 ├── scripts/                                     # 确定性运维
 ├── dashboard.md                                 # Dataview 诊断
-└── SPEC.md                                      # 本文件
+└── .trellis/{SPEC.md,PLAN.md}                   # 本法律 + 施工图
 ```
+
+> 注：README 架构图含 `prompts/` 一栏，与本 SPEC 不一致；以 SPEC 为准，`prompts/` 视为遗留目录，不进闭环。
 
 **notes/ 物理摆放规则**：按知识原子本身分类（疾病放 `notes/医学/疾病/`、药物放 `notes/医学/药物/`），系统/课程归属全部交给 tag，**不在目录上做二维切片**。
 
@@ -112,13 +156,37 @@ aistudy/
 
 ### 5.1 Anki ↔ vault mastery 同步（单向：Anki → vault）
 
-- `anki-export.sh` 生成卡时，把 Anki note id 回写到 note frontmatter 的 `anki_id`。
-- `scripts/anki-sync.sh` 读取 Anki 导出的复习日志 CSV（card_id, review_date, interval, ease）：
-  - `interval ≥ 21 天` 且 `mastery < 3` → 升 `mastery=3`，更新 `last_reviewed`。
-  - `interval ≥ 7 天` 且 `mastery < 2` → 升 `mastery=2`。
-  - 连续 2 次 `ease < 1.5` → 降 `mastery` 一级，标 `<!-- drift -->`。
-- vault → Anki 方向靠下次 `anki-export` 重新生成 deck，按 `anki_id` 更新已有卡，避免重复。
-- **不追求实时**，每周或考前手动跑一次 sync 即可。
+**anki_id 生成策略**（2026-07-01 锁定）：`anki_id` = note 级稳定 hash，确定性生成，确保 re-export 不重复出卡、sync 能对账：
+```
+anki_id = int(sha1(f"{slug}::{descriptor_key}").hexdigest()[:8], 16) & 0x7fffffff
+```
+- 输入为 frontmatter `slug` + 该 note 触发成卡的描述子 key（一 note 多 descriptor 时，每行各生一张卡，anki_id 用 slug+该 key）。
+- `anki-export.sh` 生成卡时把此 id 同时作为 genanki note 的 guid 与 frontmatter `anki_id` 回写。
+- quiz 题卡同理：`anki_id = int(sha1(f"quiz::{slug}::{n}").hexdigest()[:8], 16) & 0x7fffffff`（n 为该 note 下第 n 题）。
+
+**CSV 来源与格式**（2026-07-01 锁定）：sync 不直连 Anki SQLite，改由用户跑一段确定性 SQL 导出 CSV（避免库锁、跨版本 schema 风险）。SQL 写死在 `scripts/anki-sync-export.sql`，产出列：`note_id,review_date,interval,ease`：
+
+```sql
+SELECT c.nid AS note_id,
+       strftime('%Y-%m-%d', r.id/1000, 'unixepoch') AS review_date,
+       MAX(r.ivl, 0) AS interval,
+       r.ease / 1000.0 AS ease
+FROM revlog r JOIN cards c ON r.cid = c.id
+GROUP BY c.nid, r.id
+ORDER BY c.nid, r.id;
+```
+- `ease` 为小数乘子（Anki permille / 1000），与下方阈值 1.5 口径一致。
+- 导出命令：`sqlite3 -csv -header ~/Anki/collection.anki2 < scripts/anki-sync-export.sql > review.csv`（Anki 需关闭以释放库锁）。
+
+**升降规则**（`scripts/anki-sync.sh` 读 CSV，按 `note_id` 对齐 frontmatter `anki_id`）：
+- 组内按 `review_date` 升序取最新一条：
+  - `interval ≥ 21` 且 `mastery < 3` → 升 `mastery=3`，更新 `last_reviewed=review_date`。
+  - `interval ≥ 7` 且 `mastery < 2` → 升 `mastery=2`，更新 `last_reviewed`。
+- 取最新两条：若**连续 2 次 `ease < 1.5`** → 降 `mastery` 一级（封底 0），在文件末尾 append `<!-- drift -->`（若已存在则不重复加）。
+- 改写仅动 frontmatter 的 `mastery` / `last_reviewed` 两行 + 末尾 drift 注释，其余字节不动（RegExp 行级替换，禁用全量 YAML 序列化）。
+
+vault → Anki 方向靠下次 `anki-export` 重新生成 deck，按 `anki_id`（genanki guid）更新已有卡，避免重复。
+**不追求实时**，每周或考前手动跑一次 sync 即可。
 
 ### 5.2 rubric 信任链（人审）
 
@@ -138,7 +206,7 @@ aistudy/
 
 - 触发：周/月末手动或 cron。
 - 输入：`journal/` 近 N 天记录 + `quiz/`、`cases/` 的 `correct` 字段分布 + `mastery` 分布。
-- 输出：`journal/<YYYY-MM-DD>-review.md` 总结文档（进度、薄弱点、下周/月建议）。
+- 输出：`journal/<YYYY-MM-DD>-review.md`（schema 见 §3.6）。
 - 出题：调用 `study-quiz` / `study-case` 对薄弱点出题，source 强制校验（§5.2）仍生效，错题自然入 journal。
 - 复练：错题经 §5.3 journal → `study-drill` 置顶复练，无需新机制。
 - **护栏**：study-review 只读结构化字段（mastery / correct / journal 行 / last_reviewed），**不读 note 正文自由文本**做总结依据——底层 note 有 bug 时表现为数据缺失而非被总结成看似正确的结论。
@@ -148,7 +216,7 @@ aistudy/
 
 ### 6.1 文件名
 
-- **中文文件名**（2026-06-30 用户否决 ASCII slug 默认立场后确定）：note 文件名用中文知识点全称，路径 `notes/<domain>/<class>/<中文文件名>.md`。
+- **中文文件名**（D-6.1 决策）：note 文件名用中文知识点全称，路径 `notes/<domain>/<class>/<中文文件名>.md`。
 - ASCII slug 仍保留在 frontmatter `slug:` 字段，供脚本/URL/跨平台引用；Obsidian wikilink 用 `[[中文文件名]]` 直链，显示名即文件名，无需 `|` 别名。
 - **代价**：shell 操作需 quote、git 重命名检测对中文不稳定、跨平台有边界风险。
 - **收益**：可读性高、wikilink 简洁、与 `topic:` 字段一致。
@@ -167,6 +235,17 @@ aistudy/
 
 CPA/建造师/生物用 `subject/` 即可；医学额外用 `system/` + `course/` 做二维 indexing。
 
+**MVP 受控取值表**（2026-07-01 补，`taxonomy-check.sh` 据此校验）：
+
+| 前缀 | MVP 允许值 | defer |
+|---|---|---|
+| `domain/` | `domain/建造师` | CPA / 医学 / 生物 |
+| `subject/` | `subject/建造师.机电实务` | 其余 subject |
+| `system/` | （MVP 域不用） | 医学上线后定义 |
+| `course/` | （MVP 域不用） | 医学上线后定义 |
+
+`taxonomy-check.sh` MVP 阶段只认上表两行；其余 tag 一律拒收并报文件名+非法 tag。
+
 ### 6.3 grep / ripgrep
 
 - **所有脚本与 skill 用 `rg`（ripgrep）**，不依赖 BSD/gnu grep 差异。
@@ -175,27 +254,27 @@ CPA/建造师/生物用 `subject/` 即可；医学额外用 `system/` + `course/
 
 ### 6.4 材料版本化
 
-- `materials/<domain>/<subject>/<year>/`，按年度子目录。
+- `materials/<domain>/<subject>/<year>/`，按年度子目录（D-6.4 决策）。
 - note `source` 必须含年度：`materials/CPA/税法/2024/教材.md:p123`。
 - 法规类 note：
   - `effective_date: 2024-01-01`
   - 下一版生效时新建 note，旧 note 的 `superseded_by: [[新slug]]`，dashboard 把 superseded 项标灰。
-- **已决策（2026-06-30 D-6.4）**：保持年度子目录。备选"同名文件覆盖 + git 历史"被否决，因其牺牲"同时比对两年教材"能力。
+- 备选"同名文件覆盖 + git 历史"已否决，因其牺牲"同时比对两年教材"能力。
 
 ## 7. skills 清单
 
 | skill | 职责 | 状态 |
 |---|---|---|
-| `study-outline` | 大纲梳理→原子笔记；按 domain 加载 descriptor 词典；触发子模板 | 改造 |
-| `study-quiz` | 单点题（descriptor 级）；强制 source 校验；回写 mastery（仅降不升） | 改造 |
-| `study-case` | 综合题/案例/病历；写入 cases/；强制 rubric source | 新增 |
-| `study-drill` | grep+rg 驱动的复习计划；读 journal 近 7 天；忽略无数据 exam_freq | 改造 |
-| `study-tikz` | 仅保留供电气/通用继承；CPA/建造师/医学/生物不调用 | 保留 |
-| `study-diagram-cpa` | CPA 用，几乎不用，占位 | 新增 |
-| `study-diagram-建造师` | mermaid 工序/网络图 | 新增 |
-| `study-diagram-医学` | Excalidraw 引导 + 附件标注，不生成图 | 新增 |
-| `study-diagram-生物` | mermaid 通路 / tikz 代谢图 | 新增 |
-| `study-sync` | 提示跑 anki-sync，对账 drift 项 | 新增 |
+| `study-outline` | 大纲梳理→原子笔记；按 domain 加载 descriptor 词典；触发子模板 | 改造 ✅ |
+| `study-quiz` | 单点题（descriptor 级）；强制 source 校验；回写 mastery（仅降不升） | 改造 ✅ |
+| `study-case` | 综合题/案例/病历；写入 cases/；强制 rubric source；schema 见 §3.5 | 新增 |
+| `study-drill` | grep+rg 驱动的复习计划；读 journal 近 7 天；忽略无数据 exam_freq | 改造 ✅ |
+| `study-tikz` | 仅保留供电气/通用继承；CPA/建造师/医学/生物不调用 | 保留 ✅ |
+| `study-diagram-cpa` | CPA 用，几乎不用，占位 | defer |
+| `study-diagram-建造师` | mermaid 工序/网络图 | defer（procedure-flow 模板手写 mermaid 顶着） |
+| `study-diagram-医学` | Excalidraw 引导 + 附件标注，不生成图 | defer |
+| `study-diagram-生物` | mermaid 通路 / tikz 代谢图 | defer |
+| `study-sync` | 提示跑 anki-sync，对账 drift 项 | 新增（刻意做薄：只呈现/提示，跑脚本属确定性操作走 §2） |
 | `study-review` | 周/月复盘：读 journal N 天 + correct 分布 → 总结文档 → 调 study-quiz/case 对薄弱点出题 | 新增 |
 
 **每个 skill 文件头部必须声明依赖的 SPEC 条款编号**（如 `# implements SPEC §3.2, §5.2`），便于变更时定位。
@@ -204,17 +283,18 @@ CPA/建造师/生物用 `subject/` 即可；医学额外用 `system/` + `course/
 
 ## 8. scripts 清单
 
-| 脚本 | 职责 | 依赖 |
-|---|---|---|
-| `prep.sh` | OCR → materials 归档 | mineru/paddle |
-| `anki-export.sh` | 扫 descriptor 行 + quiz/ → apkg；回写 anki_id | genanki, rg |
-| `anki-sync.sh` | Anki 复习日志 → vault mastery 升降 | rg, python |
-| `compress-images.sh` | attachments 入库前压缩到 1600px/300KB | imagemagick |
-| `taxonomy-check.sh` | 扫 notes tag，拒绝非受控词汇 | rg, python |
+| 脚本 | 职责 | 依赖 | 状态 |
+|---|---|---|---|
+| `prep.sh` | OCR → materials 归档 | mineru/paddle | ✅ |
+| `anki-export.sh` | 扫 descriptor 行 + quiz/ → apkg；回写 anki_id（§5.1 hash） | genanki, rg | 增强（T-003a） |
+| `anki-sync-export.sql` | 从 collection.anki2 导出复习 CSV（§5.1 SQL） | sqlite3 | 新增 |
+| `anki-sync.sh` | 读 CSV → vault mastery 升降 + drift 标记 | rg, python | 新增（T-003b） |
+| `compress-images.sh` | attachments 入库前压缩到 1600px/300KB | imagemagick | 新增（T-003d） |
+| `taxonomy-check.sh` | 扫 notes tag，拒绝非受控词汇（§6.2 MVP 表） | rg, python | 新增（T-003c） |
 
 ## 9. dashboard 视图
 
-`dashboard.md` 改为分节，per-domain 查询 + 总览：
+`dashboard.md` 分节，per-domain 查询 + 总览：
 
 - §A 总览：各 domain 未掌握数、superseded 数、drift 数
 - §B CPA / §C 建造师 / §D 医学 / §E 生物：各自 core 未掌握、高频未掌握、该复盘、孤立点、错题
@@ -223,6 +303,7 @@ CPA/建造师/生物用 `subject/` 即可；医学额外用 `system/` + `course/
 - §H 待重做错题：`FROM "quiz" WHERE correct = false`，按 `last_attempted` 倒序；与 §5.3/§5.4 错题复练链呼应
 
 所有 Dataview 查询用 `FROM #domain/xxx` 起手，不依赖目录。
+MVP 只验 §A + §C + §F + §G + §H；§B/§D/§E 留结构空查询。
 
 ## 10. 不做的事
 
@@ -234,17 +315,21 @@ CPA/建造师/生物用 `subject/` 即可；医学额外用 `system/` + `course/
 - 不让 LLM 随手加 tag。
 - 不接受 quiz/cases 中无 source 的 rubric。
 - 不上 git-lfs（暂不）。
+- 不用全量 YAML 序列化改写 frontmatter（只行级 RegExp 替换，保 git diff 干净）。
 
 ## 11. 决策记录与开放项
 
 ### 已决策（锁定）
 
-- **D3 文件名（2026-06-30）**：采用中文文件名 + frontmatter `slug` 字段（§6.1）。否决纯 ASCII slug 默认立场。
+- **D3 文件名（2026-06-30）**：中文文件名 + frontmatter `slug` 字段（§6.1）。否决纯 ASCII slug 默认立场。
 - **D4 材料版本（2026-06-30）**：保持 `materials/<domain>/<subject>/<year>/` 年度子目录（§6.4）。否决同名覆盖。
-- **MVP 范围（2026-06-30）**：单域建造师.机电实务先跑通闭环，再扩域。§1 范围（4 域愿景）不动，MVP 仅见于计划文档。
+- **MVP 范围（2026-06-30）**：单域建造师.机电实务先跑通闭环，再扩域。§1 范围（4 域愿景）不动。
 - **模型（2026-06-30）**：单模型 glm-5.2，不做对比测试。
 - **study-review 进一期（2026-06-30）**：护栏为只读结构化字段，不读 note 正文（§5.4）。
+- **anki_id 策略（2026-07-01）**：确定性 sha1 hash（§5.1）。否决 genanki 自分配后回写（二次回写复杂、跨设备不稳定）。
+- **anki-sync CSV 来源（2026-07-01）**：sqlite3 跑 SQL 导出 CSV，不直连 Anki 库（§5.1）。否决 addon 依赖（版本不稳）。
+- **文档合并（2026-07-01）**：规格只留 `SPEC.md` + `PLAN.md` 两份；audit/journal/T-001 折叠并入，不再单列。
 
 ### 开放项
 
-- **E2 exam_freq**：默认装饰字段 + 无数据时 drill 忽略（§3.4）。若你想认真搞，需补"真题整理 SOP"任务。
+- **E2 exam_freq**：默认装饰字段 + 无数据时 drill 忽略（§3.4）。若认真搞，需补"真题整理 SOP"任务，暂不进 MVP。
