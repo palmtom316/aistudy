@@ -108,11 +108,14 @@ T-docs 配套文档对齐
 
 - [x] 阶段一/二（T-001-A~H）已完成
 - [x] D-6.1 / D-6.4 / MVP 范围 / 模型 / study-review / anki_id 策略 / CSV 来源 / 文档合并 全部锁定
-- [ ] T-004 / T-005 / T-templates（词典 + procedure-flow + case/journal 模板）
-- [ ] T-003a anki-export 增强（含 anki_id 回写 + 确定性）
-- [ ] T-002 study-case / study-sync / study-review
-- [ ] T-003b anki-sync-export.sql + anki-sync.sh
-- [ ] T-003c taxonomy-check.sh
-- [ ] T-003d compress-images.sh
-- [ ] T-docs scripts/README + Makefile + README 对齐
-- [ ] §3 闭环验证 8 步全过
+- [x] T-004 / T-005 / T-templates（词典 + procedure-flow + case/journal 模板）✅ 2026-07-01
+- [x] T-003a anki-export 增强（含 anki_id 回写 + 确定性）✅ 验证：4 卡×2 次稳定、anki_id 回写
+- [x] T-002 study-case / study-sync / study-review ✅
+- [x] T-003b anki-sync-export.sql + anki-sync.sh ✅ 验证：interval≥21 升 0→3 / 连续 ease<1.5 降 3→2+drift 标记
+- [x] T-003c taxonomy-check.sh ✅ 验证：mock note 通过
+- [x] T-003d compress-images.sh ✅（imagemagick 缺失检测就绪，待装环境实跑）
+- [x] T-docs scripts/README + Makefile + README 对齐 ✅
+- [x] §3 闭环验证（确定性原语全过）✅
+  - 18字段 / anki 确定性导出 / taxonomy / anki-sync 升降+drift / study-sync rg 检测 / dashboard 五节齐备
+  - 附带修复：ripgrep `-L`（--follow）误用 → `--files-without-match`
+  - 未自动验证：study-case/review 的 LLM 行为、Obsidian 渲染——需用户在 pi/Obsidian 中实跑
