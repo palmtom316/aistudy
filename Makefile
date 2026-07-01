@@ -1,12 +1,14 @@
-.PHONY: prep outline quiz case tikz drill dashboard anki taxonomy sync review help
+.PHONY: prep outline extract quiz case tikz drill dashboard anki taxonomy sync review help
 
 FILE ?=
 SUBJECT ?=
 TOPIC ?=
+BOOK ?=
 
 help:
 	@echo "make prep FILE=课件.pdf              OCR + 归档"
 	@echo "make outline SUBJECT=科目            大纲梳理 skill"
+	@echo "make extract BOOK=书名               PDF 划线 → note 草稿 skill（study-extract）"
 	@echo "make quiz TOPIC=知识点               单点出题 skill"
 	@echo "make case SUBJECT=科目               综合题/案例 skill"
 	@echo "make tikz \"电路描述\"                画电路图 skill"
@@ -24,6 +26,10 @@ prep:
 outline:
 	@test -n "$(SUBJECT)" || { echo "SUBJECT= required"; exit 1; }
 	@echo "→ 在 pi 中: /skill study-outline $(SUBJECT)"
+
+extract:
+	@test -n "$(BOOK)" || { echo "BOOK= required（如 BOOK=教材，对应 highlights/教材.md）"; exit 1; }
+	@echo "→ 在 pi 中: /skill study-extract highlights/$(BOOK).md"
 
 quiz:
 	@test -n "$(TOPIC)" || { echo "TOPIC= required"; exit 1; }

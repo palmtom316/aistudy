@@ -71,6 +71,16 @@
 - `README.md`：快速开始示例换成建造师.机电实务；删 `prompts/` 架构行（与 SPEC §4 对齐）。
 - 状态：pending
 
+### T-extract study-extract skill（2026-07-01 补，MVP 后增量）
+- 依赖：SPEC §3.7 / §3.2 / §5.2；T-004 词典
+- 产物：
+  - `skills/study-extract/SKILL.md`（读 highlights/<书名>.md 划线缓冲 → 聚类 → note 草稿；人审 gate 后落库）
+  - `templates/highlight.md`（划线缓冲 schema：blockquote + `source: file.pdf:pN`）
+  - `highlights/README.md`
+  - Makefile `extract` target
+- 定位：PDF++ 划线驱动，不替代 study-outline（outline 管整章首建，extract 管读书划线回流）
+- 状态：✅ 完成
+
 ## 2. 执行顺序
 
 ```
@@ -101,6 +111,7 @@ T-docs 配套文档对齐
 6. **drift 呈现**：跑 study-sync → 列出 drift 项 + 缺 anki_id 项。
 7. **复盘**：跑 study-review → 生成 `journal/<date>-review.md`，内容仅来自结构化字段（抽查：不引用 note 正文原句）。
 8. **dashboard**：Obsidian 打开 `dashboard.md`，§A/§C/§F/§G/§H 五节能渲染出非空结果。
+9. **PDF 划线回流**（T-extract，2026-07-01 补）：装 PDF++ 插件 → 在 `materials/.../教材.pdf` 选字 → "copy as markdown" 粘到 `highlights/教材.md` → `make extract BOOK=教材` → study-extract 打印 note 草稿 → 人审确认后写 `notes/` → `make anki` 验证新 note 的 Descriptors 成卡。
 
 全部通过 = MVP 闭环达成，可扩域。
 
@@ -115,6 +126,7 @@ T-docs 配套文档对齐
 - [x] T-003c taxonomy-check.sh ✅ 验证：mock note 通过
 - [x] T-003d compress-images.sh ✅（imagemagick 缺失检测就绪，待装环境实跑）
 - [x] T-docs scripts/README + Makefile + README 对齐 ✅
+- [x] T-extract study-extract skill + Makefile extract target ✅ 2026-07-01（划线回流闭环，§3.7）
 - [x] §3 闭环验证（确定性原语全过）✅
   - 18字段 / anki 确定性导出 / taxonomy / anki-sync 升降+drift / study-sync rg 检测 / dashboard 五节齐备
   - 附带修复：ripgrep `-L`（--follow）误用 → `--files-without-match`
