@@ -10,10 +10,11 @@ vault (仓库根 = Obsidian vault)
 ├── notes/       知识点原子笔记（一个知识点一文件，含 ## Descriptors → Anki 卡源）
 ├── quiz/        单点题（descriptor 级）
 ├── cases/       综合题/案例
+├── highlights/  PDF 划线缓冲（PDF++ 划线 → study-extract → notes）
 ├── journal/     复习日志（skill append）
 ├── dashboard.md Dataview 诊断仪表盘
 ├── templates/   note / quiz / case / journal / descriptors / structural
-├── skills/      LLM 侧行为 SOP（outline / quiz / case / drill / sync / review）
+├── skills/      LLM 侧行为 SOP（outline / extract / quiz / case / drill / sync / review）
 ├── scripts/     确定性运维脚本（OCR / Anki 导出&同步 / 校验 / 压缩）
 └── .trellis/    SPEC.md（法律）+ PLAN.md（施工图）
 ```
@@ -25,6 +26,8 @@ vault (仓库根 = Obsidian vault)
 ```bash
 make prep FILE=课件.pdf        # OCR + 归档到 materials/建造师/机电实务/<year>/
 make outline SUBJECT=建造师.机电实务   # 跑 study-outline skill → notes/
+# 读 PDF 时用 PDF++ 划线 → 粘到 highlights/<书名>.md → 跑：
+# study-extract highlights/教材.md     # 划线聚类 → note 草稿（人审后落库）
 make quiz TOPIC="电缆敷设"       # 单点题
 make case SUBJECT=建造师.机电实务  # 综合题/案例
 make drill                    # 读 dashboard 清单 → 今日复习计划
