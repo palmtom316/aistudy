@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# taxonomy-check.sh —— 扫 notes/ tag，拒绝非受控词汇
+# taxonomy-check.sh —— 扫 notes/ quiz/ cases/ 的 tag，拒绝非受控词汇
 # implements SPEC §6.2 (MVP 受控取值表)
 # 依赖: 无（纯 stdlib）。优先 .venv python，否则 python3
 set -euo pipefail
@@ -34,7 +34,11 @@ def parse_tags(fm):
 
 bad = []
 checked = 0
-for p in glob.glob("notes/**/*.md", recursive=True):
+# SPEC §6.2 受控词汇覆盖所有带 frontmatter tags 的文件：notes + quiz + cases
+patterns = []
+for pat in ("notes/**/*.md", "quiz/*.md", "cases/*.md"):
+    patterns.extend(glob.glob(pat, recursive=True))
+for p in sorted(patterns):
     if os.path.basename(p) == "README.md":
         continue
     checked += 1
@@ -57,5 +61,5 @@ if bad:
         for e in errs:
             print(f"    - {e}")
     sys.exit(1)
-print(f"✅ taxonomy 通过（{checked} notes 全部合规）")
+print(f"✅ taxonomy 通过（{checked} 文件全部合规）")
 PY
