@@ -1,7 +1,4 @@
-.obsidian/
-*.apk
-*.anki
-.ankiaddon
+.venv/
+*.apkg
 __pycache__/
-.DS_Store
-materials/raw/
+*.pyc
