@@ -1,6 +1,6 @@
 ---
 topic: 
-links: []            # [notes/<slug>.md] 必填，回链知识点
+links: []            # [notes/<domain>/<subject>/<中文文件名>.md] 必填，回链知识点
 difficulty: 1
 status:              # new / once / mastered
 last_attempted:      # YYYY-MM-DD

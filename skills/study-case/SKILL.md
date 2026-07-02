@@ -16,10 +16,10 @@ argument-hint: "[科目/主题]"
 1. **多步多知识点**：综合题须拆 ≥2 步、牵涉 ≥2 个 note；区别于 `study-quiz`（单点题、一调一题）。
 2. **rubric 可量化**：`## 标准答案 / 评分 rubric` 必须按步骤给分（"步骤一 4 分；关键点漏 X 扣 Y"），不接受"答对给满分"式 rubric。
 3. **source 强制校验**（SPEC §5.2）：`source` 必填且可追溯（真题年份题号 / `materials/.../<year>/file.md:pNNN` / `LLM-generated; reviewed YYYY-MM-DD`）。**缺 source 则 abort，不许入库**。
-4. **回链**：`links: [notes/<中文文件名>.md]` 必填（D-6.1 中文文件名）。
+4. **回链**：`links: [notes/<domain>/<subject>/<中文文件名>.md]` 必填（D-6.1 中文文件名）。
 5. **状态字段**：`correct=null / last_attempted=<today> / score 留空`。
 6. **不留空现场**：题目写完后打印给用户，等用户答完再回来评分；不替用户填 `## 我的答案`。
-7. **先读 note**：`read notes/<topic>.md` 确认题目落在已建知识点覆盖范围内，不超纲、不引用笔记里没有的资料。
+7. **先读 note**：先用 `rg --files notes | rg '/<topic>\\.md$'` 定位真实 note 路径，再 `read` 确认题目落在已建知识点覆盖范围内，不超纲、不引用笔记里没有的资料。
 
 ## 评分后动作（用户答完后回来）
 

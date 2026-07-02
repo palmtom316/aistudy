@@ -7,15 +7,17 @@
 #   1. 长边缩到 1600px（短边按比例）
 #   2. JPEG/WEBP 质量 80 起步，仍 >300KB 逐级降到 60
 #   3. PNG：strip + 8-bit；仍 >300KB 转 jpg 兜底（保留透明失败则警告）
-#   4. 原图备份到 attachments/.original/（gitignore）；压缩版原地写回
+#   4. 原图按相对路径备份到 attachments/.original/（gitignore）；压缩版原地写回
 #   5. 跳过 <300KB 且 ≤1600px 的图（无需处理）
 set -euo pipefail
 
 # 选 magick（v7）或 convert（v6）
 if command -v magick >/dev/null 2>&1; then
-    IM=(magick)
+    CONVERT_CMD=(magick)
+    IDENTIFY_CMD=(magick identify)
 elif command -v convert >/dev/null 2>&1; then
-    IM=(convert)
+    CONVERT_CMD=(convert)
+    IDENTIFY_CMD=(identify)
 else
     echo "❌ 缺 imagemagick。macOS: brew install imagemagick；Linux: apt install imagemagick" >&2; exit 1
 fi
@@ -36,22 +38,25 @@ count=0; skip=0
 for f in attachments/**/*.{jpg,jpeg,png,gif,webp,bmp}; do
   [ -f "$f" ] || continue
   # 长边像素
-  dim=$("${IM[@]}" identify -format '%w %h' "$f" 2>/dev/null | awk '{print ($1>$2?$1:$2)}')
+  dim=$("${IDENTIFY_CMD[@]}" -format '%w %h' "$f" 2>/dev/null | awk '{print ($1>$2?$1:$2)}')
   dim=${dim:-0}
   bytes=$(file_bytes "$f")
   if [ "$dim" -le "$MAX_DIM" ] && [ "$bytes" -le "$MAX_BYTES" ]; then
     skip=$((skip+1)); continue
   fi
-  # 原图备份（同名放到 .original/）
-  bak="attachments/.original/$(basename "$f")"
-  cp "$f" "$bak"
+  # 原图备份（保留相对路径；已备份过则不覆盖原图）
+  bak="attachments/.original/${f#attachments/}"
+  mkdir -p "$(dirname "$bak")"
+  if [ ! -e "$bak" ]; then
+    cp -p "$f" "$bak"
+  fi
   ext=$(echo "${f##*.}" | tr 'A-Z' 'a-z')
-  tmp="${f}.tmp"
+  tmp="${f%.*}.tmp.${ext}"
   case "$ext" in
     jpg|jpeg|webp)
       q=80
       while [ "$q" -ge 60 ]; do
-        "${IM[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -quality "$q" "$tmp"
+        "${CONVERT_CMD[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -quality "$q" "$tmp"
         s=$(file_bytes "$tmp")
         if [ "$s" -le "$MAX_BYTES" ]; then break; fi
         q=$((q-10))
@@ -59,11 +64,11 @@ for f in attachments/**/*.{jpg,jpeg,png,gif,webp,bmp}; do
       mv "$tmp" "$f"
       ;;
     png)
-      "${IM[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -strip -depth 8 "$tmp"
+      "${CONVERT_CMD[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -strip -depth 8 "$tmp"
       s=$(file_bytes "$tmp")
       if [ "$s" -gt "$MAX_BYTES" ]; then
         echo "  ⚠ PNG >300KB，转 jpg 兜底: $f" >&2
-        "${IM[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -quality 75 "${f%.*}.jpg"
+        "${CONVERT_CMD[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -quality 75 "${f%.*}.jpg"
         rm -f "$tmp" "$f"
       else
         mv "$tmp" "$f"
@@ -71,7 +76,7 @@ for f in attachments/**/*.{jpg,jpeg,png,gif,webp,bmp}; do
       ;;
     gif|bmp)
       # 透明/动画保不住，只 resize
-      "${IM[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" "$tmp"
+      "${CONVERT_CMD[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" "$tmp"
       mv "$tmp" "$f"
       ;;
   esac

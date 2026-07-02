@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # anki-export.sh —— 扫 quiz/*.md + notes/**/Descriptors :: 行 → Anki 包
-# 依赖: genanki (pip install genanki), rg
+# 依赖: genanki (pip install genanki)
 # implements SPEC §3.2, §5.1
 set -euo pipefail
 
@@ -76,8 +76,28 @@ def extract_block(text, h2):
     m = re.search(rf"^## {re.escape(h2)}\s*\n(.*?)(\n## |\Z)", text, re.S | re.M)
     return m.group(1).strip() if m else ""
 
-# descriptor 行：key:: concept → value（支持 → 和 ->）
+# descriptor 行：规范格式为「描述子:: 概念 → 值」，兼容旧「概念:: 描述子 → 值」
 DESC_RE = re.compile(r"^(.+?)::\s*(.+?)\s*(?:→|->)\s*(.+)$")
+
+def parse_descriptor_line(path, line):
+    dm = DESC_RE.match(line)
+    if not dm:
+        return None
+    left, middle, value = (dm.group(1).strip(), dm.group(2).strip(), dm.group(3).strip())
+    left_is_key = left in WHITELIST
+    middle_is_key = middle in WHITELIST
+    if left_is_key and not middle_is_key:
+        return left, middle, value
+    if middle_is_key and not left_is_key:
+        sys.stderr.write(
+            f"提示 {path}: 兼容旧 descriptor 格式，建议改成 '{middle}:: {left} → {value}'\n"
+        )
+        return middle, left, value
+    if left_is_key and middle_is_key:
+        sys.stderr.write(f"跳过 {path}: descriptor 行歧义（左右两侧都像描述子）: {line}\n")
+        return None
+    sys.stderr.write(f"跳过 {path}: 描述子不在词典白名单: {line}\n")
+    return None
 
 # ---- notes：Descriptors :: 行成卡 ----
 note_cards = 0
@@ -96,17 +116,14 @@ for p in glob.glob("notes/**/*.md", recursive=True):
         line = line.strip()
         if not line or line.startswith("<!--"):
             continue
-        dm = DESC_RE.match(line)
-        if not dm:
+        parsed = parse_descriptor_line(p, line)
+        if not parsed:
             continue
-        key, concept, value = dm.group(1).strip(), dm.group(2).strip(), dm.group(3).strip()
-        if key not in WHITELIST:
-            sys.stderr.write(f"跳过 {p}: 描述子 '{key}' 不在词典白名单\n")
-            continue
+        key, concept, value = parsed
         aid = h(f"{slug}::{key}")
         if first_id is None:
-            first_id = aid  # frontmatter anki_id 存首个 descriptor 的 hash（代表性锚点）
-        n = genanki.Note(model=MODEL, fields=[f"{concept} - {key}", value, subject], guid=aid)
+            first_id = aid  # frontmatter anki_id 只存首张 descriptor 卡的稳定 guid
+        n = genanki.Note(model=MODEL, fields=[f"{concept} - {key}", value, subject], guid=str(aid))
         DECK.add_note(n)
         note_cards += 1
     if first_id is not None:
@@ -125,7 +142,7 @@ for p in glob.glob("quiz/*.md"):
     stem = os.path.basename(p)[:-3]
     aid = h(f"quiz::{stem}")
     topic = stem.rsplit("-", 1)[0]
-    n = genanki.Note(model=MODEL, fields=[q, a, topic], guid=aid)
+    n = genanki.Note(model=MODEL, fields=[q, a, topic], guid=str(aid))
     DECK.add_note(n)
     quiz_cards += 1
 

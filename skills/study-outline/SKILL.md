@@ -27,7 +27,7 @@ argument-hint: "[科目名]"
 
 ## 输出
 
-对每个 core 知识点，写一个文件到 `notes/<domain>/<class>/<中文知识点名>.md`（D-6.1：文件名用中文，等于 `topic` 值；`slug` 字段填 ASCII 供脚本引用）。
+对每个 core 知识点，写一个文件到 `notes/<domain>/<subject>/<中文知识点名>.md`（D-6.1：文件名用中文，等于 `topic` 值；`slug` 字段填 ASCII 供脚本引用）。
 
 frontmatter 模板见 `templates/note.md`，必须填满。
 

@@ -39,14 +39,14 @@
   2. 描述子 key 必须在 `templates/descriptors/建造师.md` 内，否则 warn 并跳过。
   3. anki_id 用 §5.1 确定性 hash（`slug + descriptor_key`）；quiz 卡用 `quiz::slug::n`。
   4. 把 anki_id 同时设为 genanki note 的 `guid`（防重复）并回写 frontmatter `anki_id`。
-  5. 卡字段：Front=`[概念] - [描述子]`，Back=`值`，Topic=`subject`。
+  5. 卡字段：Front=`[概念] - [描述子]`，Back=`值`，Topic=`subject`；规范 descriptor 行格式为 `描述子:: 概念 → 值`。
 - 状态：pending
 
 ### T-003b anki-sync.sh + anki-sync-export.sql
 - 依赖：T-003a（anki_id 已回写）；SPEC §5.1
 - 产物：
-  - `scripts/anki-sync-export.sql`（§5.1 SQL，导出 `note_id,review_date,interval,ease` CSV）
-  - `scripts/anki-sync.sh`（python：读 CSV → 按 note_id 对齐 anki_id → 行级 RegExp 改写 mastery/last_reviewed + 末尾 drift 注释）
+  - `scripts/anki-sync-export.sql`（§5.1 SQL，导出 `anki_guid,review_date,interval,ease` CSV）
+  - `scripts/anki-sync.sh`（python：读 CSV → 按 anki_guid 对齐 anki_id → 行级 RegExp 改写 mastery/last_reviewed + 末尾 drift 注释，并在恢复后清掉 drift 标记）
 - 状态：pending
 
 ### T-003c taxonomy-check.sh

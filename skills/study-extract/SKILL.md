@@ -9,7 +9,7 @@ argument-hint: "[highlights/<书名>.md]"
 
 # implements SPEC §3.2, §3.7, §5.2, §6.1, §6.2
 
-把 `highlights/<book>.md` 里的原始划线转成 `notes/` 下的原子笔记草稿。**划线 ≠ 卡**——划线只是"这段重要"，要成卡必须先结构化成 `概念:: 描述子 → 值`（SPEC §3.2），这步是 LLM 的活，本 skill 干这个。划线驱动，不替代 `study-outline`。
+把 `highlights/<book>.md` 里的原始划线转成 `notes/` 下的原子笔记草稿。**划线 ≠ 卡**——划线只是"这段重要"，要成卡必须先结构化成 `描述子:: 概念 → 值`（SPEC §3.2），这步是 LLM 的活，本 skill 干这个。划线驱动，不替代 `study-outline`。
 
 ## 输入
 
@@ -17,10 +17,10 @@ argument-hint: "[highlights/<书名>.md]"
 
 ## 输出
 
-`notes/<domain>/<class>/<中文知识点名>.md` 草稿。**先打印不落库**，用户逐篇点头后才写盘。每篇草稿：
+`notes/<domain>/<subject>/<中文知识点名>.md` 草稿。**先打印不落库**，用户逐篇点头后才写盘。每篇草稿：
 
 - frontmatter 按 `templates/note.md` 全 18 字段，`source` 字段填划线来的 `materials/.../file.pdf:pNNN`（§5.2 信任链）
-- `## Descriptors` 块：从 `templates/descriptors/建造师.md` 词典取描述子，把划线内容结构化为 `概念:: 描述子 → 值`，至少 3 条（§3.2）
+- `## Descriptors` 块：从 `templates/descriptors/建造师.md` 词典取描述子，把划线内容结构化为 `描述子:: 概念 → 值`，至少 3 条（§3.2）
 - `## 自测一题`：基于该簇划线出一道应用题（不套话题）
 
 ## 强制约束（不可绕过）
@@ -41,7 +41,7 @@ argument-hint: "[highlights/<书名>.md]"
 3. 对每簇：
    a. 定一个中文知识点名（= 文件名）。
    b. `read templates/descriptors/建造师.md` 选合适描述子。
-   c. 把划线内容结构化成 `概念:: 描述子 → 值` 行（≥3 条）。
+   c. 把划线内容结构化成 `描述子:: 概念 → 值` 行（≥3 条）。
    d. `source` 字段填该簇涉及的所有 `file.pdf:pNNN`。
    e. 出一道 `## 自测一题`。
 4. 打印所有草稿全文（不写盘），列清单等用户逐篇确认。

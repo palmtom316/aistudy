@@ -2,7 +2,7 @@
 exam:               # 一建 | 二建 | CPA综合 | 执业医师 | ...（出题来源/级别）
 date:               # YYYYMMDD 做题日
 subject:            # 建造师.机电实务 | ...
-links: []           # [notes/中文文件名.md] 回链知识点，必填（D-6.1 中文文件名）
+links: []           # [notes/<domain>/<subject>/<中文文件名>.md] 回链知识点，必填（D-6.1 中文文件名）
 difficulty: 1       # 1-5
 last_attempted:     # YYYY-MM-DD | null
 correct:            # true | false | null

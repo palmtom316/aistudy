@@ -9,15 +9,15 @@ argument-hint: "[知识点名]"
 
 # implements SPEC §5.2, §5.3
 
-对着 `notes/<topic>.md` 出一道题，写入 `quiz/<topic>-<序号>.md`。
+先定位 `notes/**/<topic>.md` 对应的真实 note，再出一道题，写入 `quiz/<topic>-<序号>.md`。
 
 ## 强制约束
 
-1. **基于笔记内容出题**：先 `read notes/<topic>.md`，题目必须落在笔记覆盖范围内，不超纲、不引用笔记里没有的资料。
+1. **基于笔记内容出题**：先用 `rg --files notes | rg '/<topic>\\.md$'` 定位 note，再 `read` 该文件；题目必须落在笔记覆盖范围内，不超纲、不引用笔记里没有的资料。
 2. **带上 rubric**：`## 标准答案 / 评分 rubric` 区块必须可量化（步骤分、关键点扣分）。
 3. **source 强制校验**（SPEC §5.2）：`source` 必填且可追溯（真题年份题号 / 教材页码 / `LLM-generated; reviewed YYYY-MM-DD`）。**缺 source 则 abort，不许入库**。
 4. **不留空现场**：题目区块写完后，把题目本身打印给用户，等用户答完再回来评分；不要替用户填 `## 我的答案`。
-5. **回链**：`links: [notes/<中文文件名>.md]` 必填（D-6.1：文件名用中文）。
+5. **回链**：`links: [notes/<domain>/<subject>/<中文文件名>.md]` 必填（D-6.1：文件名用中文）。
 6. **状态字段**：`status=new / correct=null / last_attempted=<today>`。
 7. **难度自适应**：若该知识点 `exam_freq >= 2`，题目难度向真题靠拢；若 `mastery >= 2`，出综合/变形题而非基础题。
 
@@ -26,7 +26,7 @@ argument-hint: "[知识点名]"
 1. 把用户答案填进 `## 我的答案`。
 2. 按 rubric 给分，填 `correct: true/false`、`last_attempted: today`、`status: once/mastered`。
 3. **回写 notes**（SPEC §5.2 信任链）：
-   - 答错 → `notes/<中文文件名>.md` 的 `mastery` **降一级**（封底 0），`last_reviewed: today`，`## 错因 / 复习触发` 写明哪一步崩了。
+   - 答错 → `links` 指向的 note `mastery` **降一级**（封底 0），`last_reviewed: today`，`## 错因 / 复习触发` 写明哪一步崩了。
    - 答对 → `correct: true` **仅作 hint，不自动升 mastery**。只更新 `last_reviewed: today`、`status: once`。升 mastery 只走 Anki sync 或人审（提示用户："确认掌握请手动升 mastery，或等 anki-sync"）。
 4. 触发提示：若该题 `correct=false`，提示用户 `make drill`。
 5. journal append：向 `journal/<YYYY-MM-DD>.md` append 一行 `- HH:MM | <slug> | <correct/null> | <drift?>`（写前 flock）。
