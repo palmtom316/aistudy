@@ -11,7 +11,7 @@ help:
 	@echo "make extract BOOK=书名               PDF 划线 → note 草稿 skill（study-extract）"
 	@echo "make quiz TOPIC=知识点               单点出题 skill"
 	@echo "make case SUBJECT=科目               综合题/案例 skill"
-	@echo "make tikz \"电路描述\"                画电路图 skill"
+	@echo "make tikz DESC=\"电路描述\"           画电路图 skill"
 	@echo "make drill                           今日复习计划"
 	@echo "make dashboard                       打开仪表盘"
 	@echo "make anki                            导出 Anki 包（Descriptors + quiz）"
@@ -40,7 +40,8 @@ case:
 	@echo "→ 在 pi 中: /skill study-case $(SUBJECT)"
 
 tikz:
-	@echo "→ 在 pi 中: /skill study-tikz \"$(MAKECMDGOALS)\""
+	@test -n "$(DESC)" || { echo "DESC= required（如 DESC=\"RC 低通滤波器\"）"; exit 1; }
+	@echo "→ 在 pi 中: /skill study-tikz \"$(DESC)\""
 
 drill:
 	@echo "→ 在 pi 中: /skill study-drill"

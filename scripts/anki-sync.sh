@@ -26,7 +26,7 @@ def h(s):
 
 FM_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.S | re.M)
 DESC_RE = re.compile(r"^(.+?)::\s*(.+?)\s*(?:→|->)\s*(.+)$")
-DRIFT_RE = re.compile(r"(?m)^\s*<!-- drift -->\s*$\n?")
+DRIFT_RE = re.compile(r"\n?\s*<!-- drift -->\s*\Z")
 
 def load_whitelist():
     keys = set()
@@ -62,6 +62,9 @@ def parse_descriptor_line(path, line):
     if left_is_key and not middle_is_key:
         return left, middle, value
     if middle_is_key and not left_is_key:
+        sys.stderr.write(
+            f"提示 {path}: 兼容旧 descriptor 格式，建议改成 '{middle}:: {left} → {value}'\n"
+        )
         return middle, left, value
     if left_is_key and middle_is_key:
         sys.stderr.write(f"跳过 {path}: descriptor 行歧义（左右两侧都像描述子）: {line}\n")

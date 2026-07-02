@@ -17,20 +17,20 @@
 - 依赖：SPEC §3.2
 - 产物：`templates/descriptors/建造师.md`
 - 内容：受控描述子词典，枚举 `定义/工序/参数/规范条文/作用/要求` 等 key + 用途说明 + 示例行。
-- 状态：pending
+- 状态：done ✅ 2026-07-01
 
 ### T-005 structural 子模板（MVP 单份）
 - 依赖：SPEC §3.3
 - 产物：`templates/structural/procedure-flow.md`
 - 内容：18 字段 frontmatter + mermaid 工序图占位 + 规范条文区 + `## Descriptors`（工序:: → 步骤链；规范条文:: → 条文）。
-- 状态：pending
+- 状态：done ✅ 2026-07-01
 
 ### T-templates 缺失模板补齐（2026-07-01 补，随阶段三）
 - 依赖：SPEC §3.5 / §3.6
 - 产物：
   - `templates/case.md`（§3.5 schema）
   - `templates/journal.md`（§3.6 journal 行格式占位）
-- 状态：pending（轻量，与 T-004/T-005 同批做）
+- 状态：done ✅ 2026-07-01（轻量，与 T-004/T-005 同批做）
 
 ### T-003a anki-export.sh 增强（⭐ 关键路径，先于 T-002）
 - 依赖：T-004 词典；SPEC §3.2 / §5.1

@@ -30,6 +30,8 @@ argument-hint: "[科目/主题]"
    - 全对 → `correct: true` **仅作 hint，不自动升 mastery**。提示："确认掌握请手动升 mastery，或等 anki-sync"。
 4. journal append（SPEC §5.3，**跨平台 mkdir 锁**）：
    ```
+   # 清理 >60s 的残留锁（skill 崩溃后兜底）
+   if [ -d journal/.lock ] && [ $(( $(date +%s) - $(stat -f %m journal/.lock 2>/dev/null || stat -c %Y journal/.lock 2>/dev/null || echo 0) )) -gt 60 ]; then rmdir journal/.lock 2>/dev/null || true; fi
    mkdir journal/.lock 2>/dev/null || sleep 1 && mkdir journal/.lock 2>/dev/null
    # 得到锁后 append；失败则重试 ≤3 次
    echo "- $(date +%H:%M) | <slug> | <correct/null> | <drift?>" >> journal/$(date +%F).md

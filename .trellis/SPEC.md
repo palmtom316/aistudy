@@ -165,7 +165,7 @@ aistudy/
 └── .trellis/{SPEC.md,PLAN.md}                   # 本法律 + 施工图
 ```
 
-> 注：README 架构图含 `prompts/` 一栏，与本 SPEC 不一致；以 SPEC 为准，`prompts/` 视为遗留目录，不进闭环。
+> 注：`prompts/` 为遗留目录，不进闭环；已从 README 架构图删除，目录本身待清理。
 
 **notes/ 物理摆放规则**：按知识原子本身分类（疾病放 `notes/医学/疾病/`、药物放 `notes/医学/药物/`），系统/课程归属全部交给 tag，**不在目录上做二维切片**。
 

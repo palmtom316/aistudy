@@ -7,6 +7,7 @@
 --   review_date = 复习日 (YYYY-MM-DD)
 --   interval    = 复习后间隔天数
 --   ease        = ease 乘子（permille/1000，与 §5.1 阈值 1.5 口径一致）
+-- 注: r.id 是 revlog 主键，每行唯一，无需 GROUP BY 聚合。
 SELECT n.guid AS anki_guid,
        strftime('%Y-%m-%d', r.id / 1000, 'unixepoch') AS review_date,
        MAX(r.ivl, 0) AS interval,
@@ -14,5 +15,4 @@ SELECT n.guid AS anki_guid,
 FROM revlog r
 JOIN cards c ON r.cid = c.id
 JOIN notes n ON c.nid = n.id
-GROUP BY n.guid, r.id
 ORDER BY n.guid, r.id;

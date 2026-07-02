@@ -22,7 +22,7 @@ argument-hint: "[周|月] [N天]"
    `rg -A999 "^# " journal/` 取近 N 天文件，统计每 slug 的 correct=false 频次。
 2. **mastery 分布**：`rg "^mastery: [0-3]" notes/ -g '!README.md'` → 按 mastery 0/1/2/3 计数。
 3. **correct 分布**：`rg "^correct: (true|false)" quiz/ cases/ -g '!README.md'` → 对/错计数。
-4. **低掌握 core 项**：`rg -l "core: true" notes/ | xargs rg -L "mastery: [23]"` → core 但没掌握。
+4. **低掌握 core 项**：`rg -l "core: true" notes/ -g '!README.md' | xargs rg --files-without-match "mastery: [23]"` → core 但没掌握（注意：`rg -L` 是 `--follow` 不是 files-without-match，必须用 `--files-without-match`，见 SPEC §6.3）。
 
 ## 输出
 
