@@ -1,0 +1,12 @@
+# aistudy Python dependencies (optional components)
+# Core export/sync scripts only need genanki when running `make anki`.
+genanki>=0.13.0
+
+# Optional OCR backends (install only if using make prep on PDFs without pre-OCR md)
+# paddleocr>=2.7.0
+# mineru is a CLI tool; install separately: https://github.com/opendatalab/MinerU
+
+# System tools (not pip):
+# - imagemagick (compress-images.sh)
+# - rg / ripgrep (skills)
+# - sqlite3 (anki-sync-export.sql)

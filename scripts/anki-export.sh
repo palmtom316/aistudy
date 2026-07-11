@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # anki-export.sh —— 扫 quiz/*.md + notes/**/Descriptors :: 行 → Anki 包
 # 依赖: genanki (pip install genanki)
-# implements SPEC §3.2, §5.1
+# implements SPEC §3.2, §5.1, §5.2
 set -euo pipefail
 
 # 优先用 venv（含 genanki），否则回退系统 python3
@@ -58,6 +58,24 @@ def fm_get(text, field):
     mm = re.search(rf"^{field}:\s*(.*)$", m.group(1), re.M)
     return mm.group(1).strip() if mm else None
 
+def fm_source_values(text):
+    raw = fm_get(text, "source")
+    if raw is None:
+        return []
+    raw = raw.strip()
+    if not raw or raw in ("[]", "null", "~"):
+        return []
+    # YAML inline list or single scalar
+    items = re.findall(r'["\']([^"\']+)["\']', raw)
+    if items:
+        return [item.strip() for item in items if item.strip()]
+    if raw.startswith("[") and raw.endswith("]"):
+        inner = raw[1:-1].strip()
+        if not inner:
+            return []
+        return [part.strip().strip("\"'") for part in inner.split(",") if part.strip()]
+    return [raw]
+
 def fm_set_anki_id(path, anki_id):
     """仅在 frontmatter 内行级替换 anki_id 行；无则追加到 frontmatter 末尾"""
     txt = open(path, encoding="utf-8").read()
@@ -99,6 +117,8 @@ def parse_descriptor_line(path, line):
     sys.stderr.write(f"跳过 {path}: 描述子不在词典白名单: {line}\n")
     return None
 
+errors = []
+
 # ---- notes：Descriptors :: 行成卡 ----
 note_cards = 0
 for p in glob.glob("notes/**/*.md", recursive=True):
@@ -112,6 +132,7 @@ for p in glob.glob("notes/**/*.md", recursive=True):
     subject = fm_get(txt, "subject") or ""
     desc_block = extract_block(txt, "Descriptors")
     first_id = None
+    seen_keys = set()
     for line in desc_block.splitlines():
         line = line.strip()
         if not line or line.startswith("<!--"):
@@ -120,6 +141,10 @@ for p in glob.glob("notes/**/*.md", recursive=True):
         if not parsed:
             continue
         key, concept, value = parsed
+        if key in seen_keys:
+            errors.append(f"{p}: 重复 descriptor key '{key}'（同 note 内 key 必须唯一）")
+            continue
+        seen_keys.add(key)
         aid = h(f"{slug}::{key}")
         if first_id is None:
             first_id = aid  # frontmatter anki_id 只存首张 descriptor 卡的稳定 guid
@@ -139,12 +164,27 @@ for p in glob.glob("quiz/*.md"):
     a = extract_block(txt, "标准答案 / 评分 rubric")
     if not q:
         continue
+    sources = fm_source_values(txt)
+    if not sources:
+        errors.append(f"{p}: quiz 缺 source（SPEC §5.2），拒绝导出")
+        continue
+    if not re.search(r"^source:\s*", a, re.M) and "source:" not in a.lower():
+        # rubric 内也应有 source 痕迹；允许 frontmatter source 兜底，但给出提示
+        sys.stderr.write(f"提示 {p}: rubric 内未见 source: 行，已用 frontmatter source 放行\n")
     stem = os.path.basename(p)[:-3]
-    aid = h(f"quiz::{stem}")
+    slug = fm_get(txt, "slug") or stem
+    # SPEC §5.1: quiz::{slug}::{n}；单题 quiz 文件 n=1
+    aid = h(f"quiz::{slug}::1")
     topic = stem.rsplit("-", 1)[0]
     n = genanki.Note(model=MODEL, fields=[q, a, topic], guid=str(aid))
     DECK.add_note(n)
     quiz_cards += 1
+
+if errors:
+    sys.stderr.write("❌ anki-export 拒绝导出:\n")
+    for err in errors:
+        sys.stderr.write(f"  - {err}\n")
+    raise SystemExit(1)
 
 pkg = "aistudy.apkg"
 genanki.Package(DECK).write_to_file(pkg)

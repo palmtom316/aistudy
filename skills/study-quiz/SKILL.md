@@ -30,15 +30,30 @@ argument-hint: "[知识点名]"
    - 答对 → `correct: true` **仅作 hint，不自动升 mastery**。只更新 `last_reviewed: today`、`status: once`。升 mastery 只走 Anki sync 或人审（提示用户："确认掌握请手动升 mastery，或等 anki-sync"）。
 4. 触发提示：若该题 `correct=false`，提示用户 `make drill`。
 5. journal append（SPEC §5.3，**跨平台 mkdir 锁**，与 study-case 一致）：
-   ```
+   ```bash
    # 清理 >60s 的残留锁（skill 崩溃后兜底）
-   if [ -d journal/.lock ] && [ $(( $(date +%s) - $(stat -f %m journal/.lock 2>/dev/null || stat -c %Y journal/.lock 2>/dev/null || echo 0) )) -gt 60 ]; then rmdir journal/.lock 2>/dev/null || true; fi
-   mkdir journal/.lock 2>/dev/null || sleep 1 && mkdir journal/.lock 2>/dev/null
-   # 得到锁后 append；失败则重试 ≤3 次
-   echo "- $(date +%H:%M) | <slug> | <correct/null> | <drift?>" >> journal/$(date +%F).md
+   if [ -d journal/.lock ] && [ $(( $(date +%s) - $(stat -f %m journal/.lock 2>/dev/null || stat -c %Y journal/.lock 2>/dev/null || echo 0) )) -gt 60 ]; then
+     rmdir journal/.lock 2>/dev/null || true
+   fi
+   acquired=0
+   for i in 1 2 3; do
+     if mkdir journal/.lock 2>/dev/null; then
+       acquired=1
+       trap 'rmdir journal/.lock 2>/dev/null || true' EXIT
+       break
+     fi
+     sleep 1
+   done
+   [ "$acquired" = 1 ] || { echo "failed to acquire journal lock" >&2; exit 1; }
+   JFILE="journal/$(date +%F).md"
+   if [ ! -f "$JFILE" ]; then
+     printf '# %s 复习日志\n\n' "$(date +%F)" > "$JFILE"
+   fi
+   echo "- $(date +%H:%M) | <slug> | <correct/null> | <drift?>" >> "$JFILE"
    rmdir journal/.lock
+   trap - EXIT
    ```
-   行格式见 §3.6。首行 `# <date> 复习日志` 已存在则不动，不存在则先建（用 `templates/journal.md`）。
+   行格式见 §3.6。首行 `# <date> 复习日志` 已存在则不动，不存在则先建。
 
 ## 不做的事
 

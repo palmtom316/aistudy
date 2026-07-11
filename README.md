@@ -24,7 +24,8 @@ vault (仓库根 = Obsidian vault)
 ## 快速开始
 
 ```bash
-make prep FILE=课件.pdf        # OCR + 归档到 materials/建造师/机电实务/<year>/
+make prep FILE=课件.pdf SUBJECT=建造师.机电实务   # OCR + 归档到 materials/建造师/机电实务/<year>/
+# 若已有 OCR 后的 markdown：make prep FILE=课件.md SUBJECT=建造师.机电实务
 make outline SUBJECT=建造师.机电实务   # 跑 study-outline skill → notes/
 # 读 PDF 时用 PDF++ 划线 → 粘到 highlights/<书名>.md → 跑：
 # study-extract highlights/教材.md     # 划线聚类 → note 草稿（人审后落库）
@@ -32,7 +33,9 @@ make quiz TOPIC="电缆敷设"       # 单点题
 make case SUBJECT=建造师.机电实务  # 综合题/案例
 make drill                    # 读 dashboard 清单 → 今日复习计划
 make anki                     # 导出 Descriptors + quiz → Anki 包
-make taxonomy                 # 校验 notes tags 受控词汇
+make check                    # taxonomy + source/descriptor 信任链校验
+make smoke                    # 本地回归（prep 路径 / export / multi-card sync）
+make taxonomy                 # 仅校验 tags 受控词汇
 make sync                     # 提示对账 Anki drift（study-sync）
 make review                   # 周/月复盘
 ```

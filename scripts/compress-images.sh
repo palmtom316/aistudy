@@ -15,13 +15,12 @@ set -euo pipefail
 if command -v magick >/dev/null 2>&1; then
     CONVERT_CMD=(magick)
     IDENTIFY_CMD=(magick identify)
-elif command -v convert >/dev/null 2>&1; then
+elif command -v convert >/dev/null 2>&1 && command -v identify >/dev/null 2>&1; then
     CONVERT_CMD=(convert)
     IDENTIFY_CMD=(identify)
 else
     echo "❌ 缺 imagemagick。macOS: brew install imagemagick；Linux: apt install imagemagick" >&2; exit 1
 fi
-command -v identify >/dev/null 2>&1 || { echo "❌ 缺 imagemagick（identify）" >&2; exit 1; }
 
 MAX_DIM=1600
 MAX_BYTES=$((300*1024))
@@ -67,9 +66,14 @@ for f in attachments/**/*.{jpg,jpeg,png,gif,webp,bmp}; do
       "${CONVERT_CMD[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -strip -depth 8 "$tmp"
       s=$(file_bytes "$tmp")
       if [ "$s" -gt "$MAX_BYTES" ]; then
-        echo "  ⚠ PNG >300KB，转 jpg 兜底: $f" >&2
-        "${CONVERT_CMD[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -quality 75 "${f%.*}.jpg"
-        rm -f "$tmp" "$f"
+        # 保留 PNG 引用：继续降质，不转 JPG，避免 md 断链
+        echo "  ⚠ PNG >300KB，继续降质但保留 PNG 扩展名: $f" >&2
+        "${CONVERT_CMD[@]}" "$f" -resize "${MAX_DIM}x${MAX_DIM}>" -strip -depth 8 -colors 256 "$tmp"
+        s2=$(file_bytes "$tmp")
+        if [ "$s2" -gt "$MAX_BYTES" ]; then
+          echo "  ⚠ PNG 仍 >300KB，已缩到 ${MAX_DIM}px 并 strip: $f" >&2
+        fi
+        mv "$tmp" "$f"
       else
         mv "$tmp" "$f"
       fi

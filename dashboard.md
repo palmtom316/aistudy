@@ -7,29 +7,29 @@
 
 ```dataview
 TABLE length(rows) AS 数量
-FROM "notes"
+FROM #domain/建造师
 GROUP BY mastery
 ```
 
 ```dataview
 TABLE length(rows) AS 未掌握数
-FROM "notes"
+FROM #domain/建造师
 WHERE mastery <= 1
-GROUP BY domain
+GROUP BY file.folder
 ```
 
 ```dataview
 TABLE length(rows) AS superseded 数
-FROM "notes"
+FROM #domain/建造师
 WHERE superseded_by != null
-GROUP BY domain
+GROUP BY file.folder
 ```
 
 ```dataview
 TABLE length(rows) AS drift 数
-FROM "notes"
+FROM #domain/建造师
 WHERE contains(file.content, "<!-- drift -->")
-GROUP BY domain
+GROUP BY file.folder
 ```
 
 ## §B CPA
@@ -64,10 +64,23 @@ SORT exam_freq DESC, difficulty DESC
 ```
 
 ```dataview
+TABLE topic, exam_freq, last_reviewed
+FROM #domain/建造师
+WHERE exam_freq >= 2 AND mastery <= 1
+SORT exam_freq DESC
+```
+
+```dataview
 TABLE topic, last_reviewed
 FROM #domain/建造师
 WHERE last_reviewed != null AND date(today) - date(last_reviewed) > dur(7 days)
 SORT last_reviewed ASC
+```
+
+```dataview
+TABLE topic, related
+FROM #domain/建造师
+WHERE length(related) = 0
 ```
 
 ## §D 医学
@@ -106,7 +119,7 @@ SORT last_reviewed ASC
 
 ```dataview
 TABLE topic, effective_date, superseded_by
-FROM "notes"
+FROM #domain/建造师
 WHERE effective_date != null AND superseded_by = null
 AND date(today) - date(effective_date) > dur(365 days)
 SORT effective_date ASC
@@ -116,13 +129,13 @@ SORT effective_date ASC
 
 ```dataview
 TABLE topic, anki_id
-FROM "notes"
+FROM #domain/建造师
 WHERE anki_id = null AND has_image = false
 ```
 
 ```dataview
 TABLE topic, anki_id
-FROM "notes"
+FROM #domain/建造师
 WHERE contains(file.content, "<!-- drift -->")
 ```
 

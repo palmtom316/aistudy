@@ -14,6 +14,7 @@ user-invocable: true
 
 1. **drift 项**：`rg -l "<!-- drift -->" notes/` → 当前仍处于 drift 的 note（恢复后 anki-sync.sh 会清掉标记）。
 2. **未导出项**：`rg --files-without-match "anki_id: [0-9]" notes/ -g '!README.md'` → frontmatter 无 anki_id 的 note（还没跑过 anki-export）。
+   - 注意：`anki_id` 只表示**至少导出过一张 descriptor 卡**；多卡 note 的其余卡 guid 不在 frontmatter。
 3. **anki_id 缺失分布**：按 subject 汇总数量。
 
 ## 输出（直接打印，不写文件）

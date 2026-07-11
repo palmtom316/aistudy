@@ -173,15 +173,17 @@ aistudy/
 
 ### 5.1 Anki ↔ vault mastery 同步（单向：Anki → vault）
 
-**anki_id 生成策略**（2026-07-01 锁定）：`anki_id` = note 级稳定 hash，确定性生成，确保 re-export 不重复出卡、sync 能对账：
+**anki_id 生成策略**（2026-07-01 锁定；2026-07-12 补多卡语义）：每张 Anki 卡有独立稳定 guid；frontmatter `anki_id` 仅作「首卡/主卡」便利字段，**不能**单独表达多 descriptor 卡集合。
 ```
-anki_id = int(sha1(f"{slug}::{descriptor_key}").hexdigest()[:8], 16) & 0x7fffffff
+card_guid = int(sha1(f"{slug}::{descriptor_key}").hexdigest()[:8], 16) & 0x7fffffff
+frontmatter.anki_id = 该 note 第一个成功导出的 descriptor 卡 guid
 ```
-- 输入为 frontmatter `slug` + 该 note 触发成卡的描述子 key（一 note 多 descriptor 时，每行各生一张卡，anki_id 用 slug+该 key）。
-- `anki-export.sh` 生成卡时把此 id 同时作为 genanki note 的 guid 与 frontmatter `anki_id` 回写。
-- quiz 题卡同理：`anki_id = int(sha1(f"quiz::{slug}::{n}").hexdigest()[:8], 16) & 0x7fffffff`（n 为该 note 下第 n 题）。
+- 输入为 frontmatter `slug` + 该 note 触发成卡的描述子 key（一 note 多 descriptor 时，**每行各生一张卡**，每张卡 guid = `slug::该 key`）。
+- `anki-export.sh` 生成卡时：每张卡用各自 guid；frontmatter `anki_id` **只回写首张** descriptor 卡 guid（便于「是否已导出」快速扫描）。
+- 同一 note 内 **descriptor key 必须唯一**；重复 key 导致 guid 碰撞，export/sync 必须 fail-fast。
+- quiz 题卡：`card_guid = int(sha1(f"quiz::{slug}::{n}").hexdigest()[:8], 16) & 0x7fffffff`（n 为该 quiz 文件内第 n 题；单题文件 n=1）。quiz **不写** frontmatter `anki_id`。
 
-**CSV 来源与格式**（2026-07-02 修订）：sync 不直连 Anki SQLite，改由用户跑一段确定性 SQL 导出 CSV（避免库锁、跨版本 schema 风险）。SQL 写死在 `scripts/anki-sync-export.sql`，产出列：`anki_guid,review_date,interval,ease`：
+**CSV 来源与格式**（2026-07-02 修订；2026-07-12 对齐实现）：sync 不直连 Anki SQLite，改由用户跑一段确定性 SQL 导出 CSV（避免库锁、跨版本 schema 风险）。SQL 写死在 `scripts/anki-sync-export.sql`，产出列：`anki_guid,review_date,interval,ease`：
 
 ```sql
 SELECT n.guid AS anki_guid,
@@ -191,21 +193,26 @@ SELECT n.guid AS anki_guid,
 FROM revlog r
 JOIN cards c ON r.cid = c.id
 JOIN notes n ON c.nid = n.id
-GROUP BY n.guid, r.id
 ORDER BY n.guid, r.id;
 ```
-- `anki_guid` = Anki `notes.guid`，就是 `anki-export.sh` 写入且 frontmatter `anki_id` 保存的那串稳定 guid；**不是** Anki `notes.id`。
+- `r.id` 是 revlog 主键，每行唯一，**无需 GROUP BY**（实现文件 `anki-sync-export.sql` 与此一致；旧示例中的 `GROUP BY n.guid, r.id` 已废弃）。
+- `anki_guid` = Anki `notes.guid`，即 export 写入的稳定 card guid；**不是** Anki `notes.id`，也**不一定**等于 frontmatter `anki_id`（多卡 note 时只有首卡 guid 写在 frontmatter）。
 - `ease` 为小数乘子（Anki permille / 1000），与下方阈值 1.5 口径一致。
 - 导出命令：`sqlite3 -csv -header ~/Anki/collection.anki2 < scripts/anki-sync-export.sql > review.csv`（Anki 需关闭以释放库锁）。
 
-**升降规则**（`scripts/anki-sync.sh` 读 CSV，按 `anki_guid` 对齐 frontmatter `anki_id`）：
-- 组内按 `review_date` 升序取最新一条：
-  - `interval ≥ 21` 且 `mastery < 3` → 升 `mastery=3`，更新 `last_reviewed=review_date`。
-  - `interval ≥ 7` 且 `mastery < 2` → 升 `mastery=2`，更新 `last_reviewed`。
-- 取最新两条：若**连续 2 次 `ease < 1.5`** → 降 `mastery` 一级（封底 0），在文件末尾写入 `<!-- drift -->`；一旦后续复习不再满足 drift 条件，脚本会自动清掉该标记。
+**升降规则**（`scripts/anki-sync.sh` 读 CSV，按 `anki_guid` 映射到 vault note path，再 **按 path 聚合**）：
+- 映射：对 vault 每个 note 的每个 descriptor 重算 `slug::key` guid，建立 `guid → path`；**不**依赖 frontmatter `anki_id` 做多卡匹配。
+- 同一 path 下所有匹配卡先聚合，再写一次 frontmatter：
+  - `note.drift = any(card.drift)`；card.drift = 该卡最新两条连续 `ease < 1.5`。
+  - `note.mastery`：降级优先（任一卡要求降级或 note.drift → 单轮最多 -1）；否则升级取最强 interval 目标但单轮最多 +1。
+  - `last_reviewed` = 匹配卡中最新 `review_date`。
+- 单卡目标（聚合前）：
+  - `interval ≥ 21` 且 `mastery < 3` → 目标 3。
+  - `interval ≥ 7` 且 `mastery < 2` → 目标 2。
+  - drift → 目标 `max(0, mastery-1)`。
 - 改写仅动 frontmatter 的 `mastery` / `last_reviewed` 两行 + 末尾 drift 注释，其余字节不动（RegExp 行级替换，禁用全量 YAML 序列化）。
 
-vault → Anki 方向靠下次 `anki-export` 重新生成 deck，按 `anki_id`（genanki guid）更新已有卡，避免重复。
+vault → Anki 方向靠下次 `anki-export` 重新生成 deck，按 **各卡独立 guid** 更新已有卡，避免重复。
 **不追求实时**，每周或考前手动跑一次 sync 即可。
 
 ### 5.2 rubric 信任链（人审）
@@ -308,11 +315,12 @@ CPA/建造师/生物用 `subject/` 即可；医学额外用 `system/` + `course/
 | 脚本 | 职责 | 依赖 | 状态 |
 |---|---|---|---|
 | `prep.sh` | OCR → materials 归档 | mineru/paddle | ✅ |
-| `anki-export.sh` | 扫 descriptor 行 + quiz/ → apkg；回写 anki_id（§5.1 hash） | genanki, rg | 增强（T-003a） |
+| `anki-export.sh` | 扫 descriptor 行 + quiz/ → apkg；回写首卡 anki_id；拒无 source quiz / 重复 key | genanki, python | 增强 |
 | `anki-sync-export.sql` | 从 collection.anki2 导出复习 CSV（§5.1 SQL） | sqlite3 | 新增 |
-| `anki-sync.sh` | 读 CSV → vault mastery 升降 + drift 标记 | rg, python | 新增（T-003b） |
-| `compress-images.sh` | attachments 入库前压缩到 1600px/300KB | imagemagick | 新增（T-003d） |
-| `taxonomy-check.sh` | 扫 notes tag，拒绝非受控词汇（§6.2 MVP 表） | rg, python | 新增（T-003c） |
+| `anki-sync.sh` | 读 CSV → 按 path 聚合 mastery/drift 写回 | python | 新增 |
+| `compress-images.sh` | attachments 入库前压缩到 1600px/300KB | imagemagick | 新增 |
+| `taxonomy-check.sh` | 扫 notes/quiz/cases tag，拒绝非受控词汇（§6.2 MVP 表） | python | 新增 |
+| `validate-content.sh` | source / 必填 frontmatter / descriptor 白名单与重复 key | python | 新增 |
 
 ## 9. dashboard 视图
 

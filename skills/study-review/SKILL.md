@@ -19,7 +19,17 @@ argument-hint: "[周|月] [N天]"
 ## 数据来源
 
 1. **journal 近 N 天**（默认 7，月复盘 30）：
-   `rg -A999 "^# " journal/` 取近 N 天文件，统计每 slug 的 correct=false 频次。
+   只读 `journal/YYYY-MM-DD.md`（排除 `*-review.md`），按文件名日期过滤近 N 天：
+   ```bash
+   N=${N:-7}
+   for f in journal/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md; do
+     [ -f "$f" ] || continue
+     base=$(basename "$f" .md)
+     # 近 N 天：用 date 比较；macOS date -j / GNU date -d 兼容由 agent 本地选择
+     echo "$f"
+   done | while read -r f; do rg -n "correct=false|\\| false" "$f" || true; done
+   ```
+   统计每 slug 的 correct=false 频次。**禁止** `rg -A999 "^# " journal/` 扫全历史。
 2. **mastery 分布**：`rg "^mastery: [0-3]" notes/ -g '!README.md'` → 按 mastery 0/1/2/3 计数。
 3. **correct 分布**：`rg "^correct: (true|false)" quiz/ cases/ -g '!README.md'` → 对/错计数。
 4. **低掌握 core 项**：`rg -l "core: true" notes/ -g '!README.md' | xargs rg --files-without-match "mastery: [23]"` → core 但没掌握（注意：`rg -L` 是 `--follow` 不是 files-without-match，必须用 `--files-without-match`，见 SPEC §6.3）。

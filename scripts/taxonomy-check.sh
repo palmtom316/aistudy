@@ -18,23 +18,27 @@ ALLOWED = {
 }
 # 医学上线后会补 system/ course/；MVP 域不用
 VALID_PREFIXES = ("domain/", "subject/", "system/", "course/")
+REQUIRED_NOTE_TAGS = {"domain/建造师", "subject/建造师.机电实务"}
 
 def parse_tags(fm):
-    # 直接匹配 prefix/value 形态，避开 []" 噪音
-    m = re.search(r"^tags:\s*(.*)$", fm, re.M)
-    tags = set()
+    """提取 tags 字段中的全部字符串，不只是 prefix/value 形态。"""
+    tags = []
+    # 同行: tags: ["a", "b"] 或 tags: [a, b]
+    m = re.search(r"^tags:\s*(\[.*\])\s*$", fm, re.M)
     if m:
-        tags |= set(re.findall(r'(\w+/[^\s"\],]+)', m.group(1)))
-    # 块式数组：tags:\n  - a\n  - b
+        tags.extend(re.findall(r'["\']?([^,"\'\[\]]+?)["\']?(?=\s*,|\s*\])', m.group(1)))
+    # 块式数组
     block = re.search(r"^tags:\s*\n((?:\s+-\s.*\n?)+)", fm, re.M)
     if block:
         for ln in block.group(1).splitlines():
-            tags |= set(re.findall(r'(\w+/[^\s"\],]+)', ln))
-    return tags
+            mm = re.match(r"\s*-\s*[\"']?(.+?)[\"']?\s*$", ln)
+            if mm:
+                tags.append(mm.group(1).strip())
+    # 去空
+    return [t.strip() for t in tags if t and t.strip()]
 
 bad = []
 checked = 0
-# SPEC §6.2 受控词汇覆盖所有带 frontmatter tags 的文件：notes + quiz + cases
 patterns = []
 for pat in ("notes/**/*.md", "quiz/*.md", "cases/*.md"):
     patterns.extend(glob.glob(pat, recursive=True))
@@ -48,7 +52,18 @@ for p in sorted(patterns):
         bad.append((p, ["无 frontmatter"]))
         continue
     tags = parse_tags(m.group(1))
+    tagset = set(tags)
+    if p.startswith("notes" + os.sep) or p.startswith("notes/"):
+        missing = sorted(REQUIRED_NOTE_TAGS - tagset)
+        if missing:
+            bad.append((p, [f"notes 缺必填 tag: {', '.join(missing)}"]))
+    if not tags:
+        bad.append((p, ["tags 为空或未解析到任何 tag 字符串"]))
+        continue
     for t in tags:
+        if "/" not in t:
+            bad.append((p, [f"非法 tag（缺前缀）: {t}"]))
+            continue
         if not t.startswith(VALID_PREFIXES):
             bad.append((p, [f"非法前缀: {t}"]))
         elif t not in ALLOWED:

@@ -3,3 +3,9 @@ attachments/.original/
 *.apkg
 __pycache__/
 *.pyc
+review.csv
+materials/.ocr-tmp*
+mock-exam-*.md
+.pi-subagents/
+.DS_Store
+*.tmp.*

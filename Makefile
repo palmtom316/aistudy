@@ -1,12 +1,12 @@
-.PHONY: prep outline extract quiz case tikz drill dashboard anki taxonomy sync review help
+.PHONY: prep outline extract quiz case tikz drill dashboard anki taxonomy check smoke sync review help
 
 FILE ?=
-SUBJECT ?=
+SUBJECT ?= 建造师.机电实务
 TOPIC ?=
 BOOK ?=
 
 help:
-	@echo "make prep FILE=课件.pdf              OCR + 归档"
+	@echo "make prep FILE=课件.pdf [SUBJECT=建造师.机电实务]  OCR + 归档"
 	@echo "make outline SUBJECT=科目            大纲梳理 skill"
 	@echo "make extract BOOK=书名               PDF 划线 → note 草稿 skill（study-extract）"
 	@echo "make quiz TOPIC=知识点               单点出题 skill"
@@ -16,12 +16,15 @@ help:
 	@echo "make dashboard                       打开仪表盘"
 	@echo "make anki                            导出 Anki 包（Descriptors + quiz）"
 	@echo "make taxonomy                        校验 notes tags 受控词汇"
+	@echo "make check                           taxonomy + content 信任链校验"
+	@echo "make smoke                           本地回归（prep/export/sync）"
 	@echo "make sync                            对账 Anki drift（study-sync）"
 	@echo "make review                          周/月复盘（study-review）"
 
 prep:
 	@test -n "$(FILE)" || { echo "FILE= required"; exit 1; }
-	bash scripts/prep.sh "$(FILE)"
+	@test -n "$(SUBJECT)" || { echo "SUBJECT= required"; exit 1; }
+	bash scripts/prep.sh "$(FILE)" "$(SUBJECT)"
 
 outline:
 	@test -n "$(SUBJECT)" || { echo "SUBJECT= required"; exit 1; }
@@ -54,6 +57,13 @@ anki:
 
 taxonomy:
 	bash scripts/taxonomy-check.sh
+
+check:
+	bash scripts/taxonomy-check.sh
+	bash scripts/validate-content.sh
+
+smoke:
+	bash scripts/smoke-test.sh
 
 sync:
 	@echo "→ 在 pi 中: /skill study-sync（列出 drift/未导出项，提示跑 anki-sync）"
