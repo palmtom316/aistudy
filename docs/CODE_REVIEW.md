@@ -277,7 +277,7 @@ command -v identify >/dev/null 2>&1 || { echo "❌ 缺 imagemagick（identify）
 
 | 模块 | 评级 | 一句话 |
 |---|---|---|
-| `.trellis/SPEC.md` | A- | 决策完整、边界清楚；部分条款未落脚本 |
+| `docs/SPEC.md` | A- | 决策完整、边界清楚；部分条款未落脚本 |
 | `Makefile` | C | skill 目标是 echo 指引尚可；`prep` 参数错 |
 | `prep.sh` | D | MVP 入库入口坏 + 路径错 + 可能毁文件语义 |
 | `anki-export.sh` | B | 白名单、双格式 descriptor、回写 anki_id 扎实；缺 source/重复 key 校验 |

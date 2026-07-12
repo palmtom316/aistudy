@@ -162,7 +162,7 @@ aistudy/
 ├── skills/                                      # LLM 侧行为
 ├── scripts/                                     # 确定性运维
 ├── dashboard.md                                 # Dataview 诊断
-└── .trellis/{SPEC.md,PLAN.md}                   # 本法律 + 施工图
+└── docs/{SPEC.md,PLAN.md,...}                   # 本法律 + 施工图 + 审查/评审
 ```
 
 > 注：`prompts/` 为遗留目录，不进闭环；已从 README 架构图删除，目录本身待清理。

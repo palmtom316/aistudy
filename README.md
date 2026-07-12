@@ -16,7 +16,7 @@ vault (仓库根 = Obsidian vault)
 ├── templates/   note / quiz / case / journal / descriptors / structural
 ├── skills/      LLM 侧行为 SOP（outline / extract / quiz / case / drill / sync / review）
 ├── scripts/     确定性运维脚本（OCR / Anki 导出&同步 / 校验 / 压缩）
-└── .trellis/    SPEC.md（法律）+ PLAN.md（施工图）
+└── docs/        项目文档（SPEC / PLAN / 审查 / 评审）
 ```
 
 判据：**确定性操作走脚本，判断与表达走 skill，阅读与答题坐 Obsidian。**
@@ -40,9 +40,9 @@ make sync                     # 提示对账 Anki drift（study-sync）
 make review                   # 周/月复盘
 ```
 
-MVP 单域：一级建造师·机电实务。法律见 `.trellis/SPEC.md`，施工图见 `.trellis/PLAN.md`。
+MVP 单域：一级建造师·机电实务。法律见 [`docs/SPEC.md`](docs/SPEC.md)，施工图见 [`docs/PLAN.md`](docs/PLAN.md)。更多文档索引见 [`docs/README.md`](docs/README.md)。
 
-学习时打开 Obsidian 指向本仓库根目录，dashboard.md 是入口。
+学习时打开 Obsidian 指向本仓库根目录，`dashboard.md` 是入口。
 
 ## 字段约定
 
